@@ -64,6 +64,8 @@ def _format_task(task: dict, verbose: bool = False) -> str:
     if verbose:
         line += f"\n         id: {task.get('id', '?')}"
         line += f"\n    project: {task.get('projectId', '?')}"
+        if task.get("desc"):
+            line += f"\n       desc: {task['desc']}"
         if task.get("content"):
             line += f"\n    content: {task['content']}"
         if task.get("dueDate"):
@@ -152,8 +154,8 @@ def cmd_append_description(args):
     client = _get_client()
     result = client.append_task_content(args.project_id, args.task_id, args.text)
     print(f"Updated task: {result.get('title', args.task_id)}")
-    if result.get("content"):
-        print(f"Description now:\n  {result['content']}")
+    if result.get("desc"):
+        print(f"Description now:\n  {result['desc']}")
 
 
 def cmd_add_checklist(args):

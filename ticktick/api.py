@@ -113,15 +113,15 @@ class TickTickClient:
 
     def append_task_content(self, project_id: str, task_id: str,
                             text: str) -> dict:
-        """Append text to a task's content (description) field."""
+        """Append text to a task's desc (description) field."""
         task = self.get_task(project_id, task_id)
-        existing = task.get("content") or ""
-        updated_content = existing + text
+        existing = task.get("desc") or ""
+        updated_desc = existing + text
         return self.update_task(
             task_id,
             projectId=project_id,
             id=task_id,
-            content=updated_content,
+            desc=updated_desc,
         )
 
     def add_checklist_items(self, project_id: str, task_id: str,
