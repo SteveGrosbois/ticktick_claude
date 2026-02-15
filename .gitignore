@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+
+# Environment and secrets
+.env
+.ticktick_token.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
