@@ -60,6 +60,8 @@ ticktick claude-tasks --json
 
 ## Claude Cowork Integration
 
+### `claude` tag — task list for Claude
+
 Tag any task in TickTick with `claude` and it will appear when running:
 
 ```bash
@@ -67,3 +69,20 @@ ticktick claude-tasks --json
 ```
 
 This JSON output is designed to be consumed by Claude cowork to assist with or complete the tagged tasks.
+
+### `claude-research` tag — automated research
+
+Tag a task with `claude-research` and the CLI will:
+1. Search the web for information related to the task title/description
+2. Append a formatted summary of findings to the task description
+3. Add actionable next steps as checklist items on the task
+
+```bash
+# Preview what would happen (no changes made)
+ticktick claude-research-tasks --dry-run
+
+# Run research and update tasks in TickTick
+ticktick claude-research-tasks
+```
+
+Research uses DuckDuckGo (no API key required) to find relevant sources, then compiles numbered findings with links and generates follow-up checklist items.

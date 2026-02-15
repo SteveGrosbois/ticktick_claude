@@ -1,5 +1,6 @@
 """TickTick Open API client."""
 
+import uuid
 from pathlib import Path
 
 import requests
@@ -109,6 +110,43 @@ class TickTickClient:
 
     def update_task(self, task_id: str, **fields) -> dict:
         return self._request("POST", f"/task/{task_id}", json=fields).json()
+
+    def append_task_content(self, project_id: str, task_id: str,
+                            text: str) -> dict:
+        """Append text to a task's content (description) field."""
+        task = self.get_task(project_id, task_id)
+        existing = task.get("content") or ""
+        updated_content = existing + text
+        return self.update_task(
+            task_id,
+            projectId=project_id,
+            id=task_id,
+            content=updated_content,
+        )
+
+    def add_checklist_items(self, project_id: str, task_id: str,
+                            titles: list[str]) -> dict:
+        """Add checklist (sub-task) items to a task."""
+        task = self.get_task(project_id, task_id)
+        existing_items = task.get("items") or []
+
+        # Determine the next sortOrder
+        max_sort = max((item.get("sortOrder", 0) for item in existing_items), default=0)
+
+        for i, title in enumerate(titles):
+            existing_items.append({
+                "id": uuid.uuid4().hex[:24],
+                "title": title,
+                "status": 0,  # 0 = open
+                "sortOrder": max_sort + i + 1,
+            })
+
+        return self.update_task(
+            task_id,
+            projectId=project_id,
+            id=task_id,
+            items=existing_items,
+        )
 
     def delete_task(self, project_id: str, task_id: str) -> None:
         self._request("DELETE", f"/task/{project_id}/{task_id}")
