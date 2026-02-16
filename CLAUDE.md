@@ -81,6 +81,37 @@ ticktick auth
 4. **Completed tasks hidden by default**: `cmd_tasks` and `cmd_claude_tasks` filter out completed tasks (`status != 0`) unless `--all` is passed.
 5. **Checklist item IDs**: Generated as 24-character hex strings via `uuid.uuid4().hex[:24]` to match TickTick's format.
 
+## Claude Cowork Workflow
+
+When running the ticktick CLI inside Claude Code, follow this workflow to pick up and work on tasks:
+
+1. **Fetch open tasks** — Run `ticktick claude-tasks --json` to list all open tasks tagged `claude`. Use the JSON output so you can parse task IDs, project IDs, titles, descriptions, and checklist items programmatically.
+
+2. **Present tasks to the user** — Display the task list in a readable format and ask the user which task they want to work on. If there is only one task, confirm it with the user before proceeding.
+
+3. **Research the selected task** — Read the task's title, description (`content` field), and any checklist items to understand the requirements. If the task references files, code, or concepts in the current repository, explore the codebase to build context. Ask the user clarifying questions if the task is ambiguous.
+
+4. **Propose a plan** — Summarize what you found and outline the steps you would take to complete the task. Ask the user if they want to proceed.
+
+5. **Execute the work** — Carry out the plan (write code, edit files, run commands, etc.). Use `ticktick append-description` to log progress notes back to the task if appropriate, and `ticktick add-checklist` to break the task into trackable sub-steps.
+
+6. **Confirm completion** — When the work is done, present the results to the user and ask if they are satisfied. If so, run `ticktick complete-task <project_id> <task_id>` to mark the task as done in TickTick.
+
+### Example session
+
+```
+> ticktick claude-tasks --json
+
+Found 2 task(s) tagged 'claude':
+
+  [open] Refactor auth module to support multiple providers  (tags: claude)  [Backend]
+  [open] Write usage examples for README                      (tags: claude)  [Docs]
+
+Which task would you like to work on?
+```
+
+After the user picks a task, research it, propose a plan, execute, and offer to mark it complete.
+
 ## Sensitive Files — Do Not Commit
 
 - `.env` — Contains OAuth client credentials
