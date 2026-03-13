@@ -33,8 +33,8 @@ requirements.txt         # Pinned dependency list
 | `ticktick projects` | List all projects with IDs                   |
 | `ticktick tasks`    | List tasks (filters: `--tag`, `--project`, `--all`, `--verbose`, `--json`) |
 | `ticktick claude-tasks` | List open tasks tagged "claude"          |
-| `ticktick append-description <project> <task> <text>` | Append to task description (routes to `desc` for CHECKLIST tasks, `content` for TEXT tasks) |
-| `ticktick add-checklist <project> <task> <items...>` | Add checklist items |
+| `ticktick append-description <project> <task> <text> --checklist <items...>` | Append description AND add checklist items atomically (use this instead of separate commands) |
+| `ticktick add-checklist <project> <task> <items...>` | Add checklist items (use `--checklist` flag on `append-description` if also writing a description) |
 | `ticktick add-daily-tasks <title> --project <name\|id> --times <time...>` | Create separate daily repeating tasks at multiple times (e.g. `7am 3pm 11pm`) |
 | `ticktick complete-task <project> <task>` | Mark task complete |
 
@@ -82,6 +82,7 @@ ticktick auth
 4. **Completed tasks hidden by default**: `cmd_tasks` and `cmd_claude_tasks` filter out completed tasks (`status != 0`) unless `--all` is passed.
 5. **Checklist item IDs**: Generated as 24-character hex strings via `uuid.uuid4().hex[:24]` to match TickTick's format.
 6. **Description field routing**: TickTick displays different fields in the app depending on task type. CHECKLIST tasks (`kind == "CHECKLIST"`) show the `desc` field; TEXT tasks (`kind == "TEXT"`) show the `content` field. `append_task_content` handles this automatically by checking `task["kind"]`.
+7. **Stale-read race condition**: The TickTick API's `/project/{id}/data` GET can return cached data immediately after a POST write. Calling `append-description` then `add-checklist` as separate commands causes `add-checklist` to fetch stale data and overwrite the just-written description. Always use `append-description ... --checklist ...` when doing both in the same session; this routes through `append_content_and_add_checklist`, which does a single fetch + single write.
 
 ## Claude Cowork Workflow
 

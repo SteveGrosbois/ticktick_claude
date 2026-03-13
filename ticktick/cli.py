@@ -207,13 +207,24 @@ def cmd_claude_tasks(args):
 
 
 def cmd_append_description(args):
-    """Append text to a task's description."""
+    """Append text to a task's description, optionally adding checklist items atomically."""
     client = _get_client()
-    result = client.append_task_content(args.project_id, args.task_id, args.text)
+    if args.checklist:
+        result = client.append_content_and_add_checklist(
+            args.project_id, args.task_id, args.text, args.checklist
+        )
+    else:
+        result = client.append_task_content(args.project_id, args.task_id, args.text)
     print(f"Updated task: {result.get('title', args.task_id)}")
     field = "desc" if result.get("kind") == "CHECKLIST" else "content"
     if result.get(field):
         print(f"Description now:\n  {result[field]}")
+    if args.checklist:
+        items = result.get("items", [])
+        print(f"Checklist ({len(items)} item(s)):")
+        for item in items:
+            status = "x" if item.get("status", 0) != 0 else " "
+            print(f"  [{status}] {item['title']}")
 
 
 def cmd_add_checklist(args):
@@ -331,6 +342,10 @@ def main():
     append_parser.add_argument("project_id", help="Project ID")
     append_parser.add_argument("task_id", help="Task ID")
     append_parser.add_argument("text", help="Text to append to the description")
+    append_parser.add_argument(
+        "--checklist", nargs="+", metavar="ITEM",
+        help="Also add these checklist items atomically (avoids stale-read overwrite)",
+    )
 
     # add-checklist
     checklist_parser = subparsers.add_parser(

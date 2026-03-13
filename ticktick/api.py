@@ -126,6 +126,35 @@ class TickTickClient:
         # Send the entire task object to preserve all fields
         return self.update_task(task_id, **task)
 
+    def append_content_and_add_checklist(self, project_id: str, task_id: str,
+                                          text: str, titles: list[str]) -> dict:
+        """Append text to description and add checklist items in a single API call.
+
+        Use this instead of calling append_task_content and add_checklist_items
+        separately, as sequential calls can trigger a stale-read race condition
+        where the second GET returns data that doesn't yet reflect the first write.
+        """
+        task = self.get_task(project_id, task_id)
+
+        # Append description
+        field = "desc" if task.get("kind") == "CHECKLIST" else "content"
+        existing = task.get(field) or ""
+        task[field] = (existing + "\n\n" + text).lstrip("\n")
+
+        # Add checklist items
+        existing_items = task.get("items") or []
+        max_sort = max((item.get("sortOrder", 0) for item in existing_items), default=0)
+        for i, title in enumerate(titles):
+            existing_items.append({
+                "id": uuid.uuid4().hex[:24],
+                "title": title,
+                "status": 0,
+                "sortOrder": max_sort + i + 1,
+            })
+        task["items"] = existing_items
+
+        return self.update_task(task_id, **task)
+
     def add_checklist_items(self, project_id: str, task_id: str,
                             titles: list[str]) -> dict:
         """Add checklist (sub-task) items to a task."""
