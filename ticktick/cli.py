@@ -3,7 +3,9 @@
 import argparse
 import json
 import os
+import re
 import sys
+from datetime import date, datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -70,6 +72,63 @@ def _format_task(task: dict, verbose: bool = False) -> str:
             line += f"\n        due: {task['dueDate']}"
 
     return line
+
+
+# ------------------------------------------------------------------
+# Helpers
+# ------------------------------------------------------------------
+
+def _parse_time(time_str: str) -> tuple[int, int]:
+    """Parse a time string into (hour, minute) using 24-hour values.
+
+    Accepts: '7am', '7AM', '3pm', '11:30pm', '13:00', '9:00'
+    """
+    s = time_str.strip().lower()
+
+    # 12-hour format: 7am, 3pm, 11:30pm, 12am, 12pm
+    m = re.match(r'^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$', s)
+    if m:
+        hour = int(m.group(1))
+        minute = int(m.group(2) or 0)
+        period = m.group(3)
+        if period == 'am':
+            hour = 0 if hour == 12 else hour
+        else:
+            hour = hour if hour == 12 else hour + 12
+        if not (0 <= hour <= 23 and 0 <= minute <= 59):
+            raise ValueError(f"Invalid time: '{time_str}'")
+        return hour, minute
+
+    # 24-hour format: 13:00, 09:30
+    m = re.match(r'^(\d{1,2}):(\d{2})$', s)
+    if m:
+        hour, minute = int(m.group(1)), int(m.group(2))
+        if not (0 <= hour <= 23 and 0 <= minute <= 59):
+            raise ValueError(f"Invalid time: '{time_str}'")
+        return hour, minute
+
+    raise ValueError(
+        f"Cannot parse time '{time_str}'. "
+        "Use formats like '7am', '3:30pm', or '13:00'."
+    )
+
+
+def _find_project_id(client, name_or_id: str) -> str:
+    """Resolve a project name (case-insensitive) or ID to a project ID."""
+    projects = client.get_projects()
+    if name_or_id in {p["id"] for p in projects}:
+        return name_or_id
+    matches = [p for p in projects if p["name"].lower() == name_or_id.lower()]
+    if len(matches) == 1:
+        return matches[0]["id"]
+    if len(matches) > 1:
+        raise RuntimeError(
+            f"Multiple projects match '{name_or_id}'. Use a project ID instead."
+        )
+    raise RuntimeError(
+        f"No project found matching '{name_or_id}'. "
+        "Run `ticktick projects` to see available projects."
+    )
 
 
 # ------------------------------------------------------------------
@@ -180,6 +239,49 @@ def cmd_add_checklist(args):
         print(f"  [{status}] {item['title']}")
 
 
+def cmd_add_daily_tasks(args):
+    """Create separate daily repeating tasks for each specified time."""
+    client = _get_client()
+
+    try:
+        project_id = _find_project_id(client, args.project)
+    except RuntimeError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+    times = []
+    for t in args.times:
+        try:
+            times.append(_parse_time(t))
+        except ValueError as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+
+    today = date.today()
+    created = []
+
+    for hour, minute in times:
+        due_dt = datetime(today.year, today.month, today.day, hour, minute, 0)
+        due_date = due_dt.strftime("%Y-%m-%dT%H:%M:%S+0000")
+
+        hour_12 = hour % 12 or 12
+        period = "AM" if hour < 12 else "PM"
+        time_label = f"{hour_12}:{minute:02d} {period}"
+
+        title = f"{args.title} ({time_label})"
+        task = client.create_task(
+            title=title,
+            project_id=project_id,
+            dueDate=due_date,
+            repeatFlag="RRULE:FREQ=DAILY;INTERVAL=1",
+        )
+        created.append(task)
+        print(f"  Created: {title}")
+
+    project_name = args.project
+    print(f"\nCreated {len(created)} daily task(s) under '{project_name}'.")
+
+
 def cmd_complete_task(args):
     """Mark a task as completed."""
     client = _get_client()
@@ -254,6 +356,22 @@ def main():
     checklist_parser.add_argument("task_id", help="Task ID")
     checklist_parser.add_argument("items", nargs="+", help="Checklist item titles")
 
+    # add-daily-tasks
+    daily_parser = subparsers.add_parser(
+        "add-daily-tasks",
+        help="Create separate daily repeating tasks at multiple times of day",
+    )
+    daily_parser.add_argument("title", help="Base task title (time will be appended)")
+    daily_parser.add_argument(
+        "--project", "-p", required=True,
+        help="Project name or ID",
+    )
+    daily_parser.add_argument(
+        "--times", "-t", nargs="+", required=True,
+        metavar="TIME",
+        help="One or more times, e.g. 7am 3pm 11pm or 07:00 15:00",
+    )
+
     # complete-task
     complete_parser = subparsers.add_parser(
         "complete-task",
@@ -275,6 +393,7 @@ def main():
         "claude-tasks": cmd_claude_tasks,
         "append-description": cmd_append_description,
         "add-checklist": cmd_add_checklist,
+        "add-daily-tasks": cmd_add_daily_tasks,
         "complete-task": cmd_complete_task,
     }
     commands[args.command](args)
