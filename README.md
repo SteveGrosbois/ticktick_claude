@@ -2,6 +2,11 @@
 
 Command-line tool for reading and managing TickTick tasks via the [TickTick Open API](https://developer.ticktick.com). Designed for integration with Claude cowork — tag tasks with `claude` in TickTick to surface them for AI-assisted completion.
 
+## Requirements
+
+- **Python >= 3.10** — [python.org/downloads](https://www.python.org/downloads/)
+- A [TickTick account](https://ticktick.com)
+
 ## Setup
 
 ### 1. Register a TickTick app
@@ -28,6 +33,9 @@ ticktick auth
 ```
 
 This opens your browser to authorize the app. Tokens are saved to `~/.ticktick_token.json`.
+
+- **Claude CLI**: You're done.
+- **Claude Cowork**: Copy `~/.ticktick_token.json` from your home directory (e.g. `C:\Users\<user_name>` on Windows) into the root of this repository. Claude Cowork runs in a VM and will copy this file to the expected location on startup.
 
 ## Usage
 
