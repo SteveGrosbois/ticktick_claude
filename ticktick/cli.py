@@ -282,6 +282,40 @@ def cmd_add_daily_tasks(args):
     print(f"\nCreated {len(created)} daily task(s) under '{project_name}'.")
 
 
+def cmd_add_task(args):
+    """Create a new task."""
+    client = _get_client()
+
+    project_id = None
+    if args.project:
+        try:
+            project_id = _find_project_id(client, args.project)
+        except RuntimeError as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+
+    priority_map = {"none": 0, "low": 1, "medium": 3, "high": 5}
+    kwargs = {}
+    if args.priority:
+        kwargs["priority"] = priority_map[args.priority]
+    if args.due:
+        kwargs["dueDate"] = args.due + "T00:00:00+0000"
+
+    task = client.create_task(
+        title=args.title,
+        project_id=project_id,
+        tags=args.tags,
+        **kwargs,
+    )
+
+    if args.json:
+        import json
+        print(json.dumps(task, indent=2, ensure_ascii=False))
+    else:
+        project_label = args.project or "Inbox"
+        print(f"Created task: {task.get('title', args.title)}  [{project_label}]")
+
+
 def cmd_complete_task(args):
     """Mark a task as completed."""
     client = _get_client()
@@ -372,6 +406,21 @@ def main():
         help="One or more times, e.g. 7am 3pm 11pm or 07:00 15:00",
     )
 
+    # add-task
+    add_task_parser = subparsers.add_parser(
+        "add-task",
+        help="Create a new task",
+    )
+    add_task_parser.add_argument("title", help="Task title")
+    add_task_parser.add_argument("--project", "-p", help="Project name or ID (default: Inbox)")
+    add_task_parser.add_argument("--tags", "-t", nargs="+", help="Tags to assign")
+    add_task_parser.add_argument(
+        "--priority", choices=["none", "low", "medium", "high"],
+        help="Task priority",
+    )
+    add_task_parser.add_argument("--due", help="Due date (YYYY-MM-DD)")
+    add_task_parser.add_argument("--json", action="store_true", help="Output as JSON")
+
     # complete-task
     complete_parser = subparsers.add_parser(
         "complete-task",
@@ -394,6 +443,7 @@ def main():
         "append-description": cmd_append_description,
         "add-checklist": cmd_add_checklist,
         "add-daily-tasks": cmd_add_daily_tasks,
+        "add-task": cmd_add_task,
         "complete-task": cmd_complete_task,
     }
     commands[args.command](args)

@@ -35,6 +35,12 @@ This opens your browser to authorize the app. Tokens are saved to `~/.ticktick_t
 # List all open tasks
 ticktick tasks
 
+# Create a simple task (goes to Inbox)
+ticktick add-task "Buy milk"
+
+# Create a task in a specific project with options
+ticktick add-task "Fix login bug" --project Backend --priority high --due 2026-03-15 --tags urgent
+
 # List tasks tagged "claude" (for Claude cowork)
 ticktick claude-tasks
 

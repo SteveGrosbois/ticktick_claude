@@ -33,6 +33,7 @@ requirements.txt         # Pinned dependency list
 | `ticktick projects` | List all projects with IDs                   |
 | `ticktick tasks`    | List tasks (filters: `--tag`, `--project`, `--all`, `--verbose`, `--json`) |
 | `ticktick claude-tasks` | List open tasks tagged "claude"          |
+| `ticktick add-task <title> --project <name\|id> --tags <tags...> --priority <level> --due <YYYY-MM-DD>` | Create a new task (project defaults to Inbox) |
 | `ticktick append-description <project> <task> <text> --checklist <items...>` | Append description AND add checklist items atomically (use this instead of separate commands) |
 | `ticktick add-checklist <project> <task> <items...>` | Add checklist items (use `--checklist` flag on `append-description` if also writing a description) |
 | `ticktick add-daily-tasks <title> --project <name\|id> --times <time...>` | Create separate daily repeating tasks at multiple times (e.g. `7am 3pm 11pm`) |
